@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REAL TIME GRAPHS - Dashboard de Clima</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .team-info {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            color: #333;
+        }
+
+        .team-info h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .team-members {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+
+        .member {
+            background: #f8f9fa;
+            padding: 10px 20px;
+            border-radius: 25px;
+            border: 2px solid #667eea;
+            font-weight: 500;
+        }
+
+        .explanation {
+            text-align: left;
+            line-height: 1.6;
+            margin-top: 15px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        input[type="text"] {
+            padding: 8px 15px;
+            border: 2px solid #ddd;
+            border-radius: 20px;
+            outline: none;
+            font-size: 14px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .start-btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+        }
+
+        .stop-btn {
+            background: linear-gradient(45deg, #f44336, #da190b);
+            color: white;
+        }
+
+        .clear-btn {
+            background: linear-gradient(45deg, #FF9800, #e68900);
+            color: white;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .status {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 25px;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .chart-title {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .chart {
+            height: 300px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+
+        .chart-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .line {
+            fill: none;
+            stroke-width: 2.5;
+        }
+
+        .temperature-line { stroke: #ff6b6b; }
+        .humidity-line { stroke: #4ecdc4; }
+        .pressure-line { stroke: #45b7d1; }
+        .wind-line { stroke: #96ceb4; }
+
+        .axis {
+            color: #666;
+            font-size: 11px;
+        }
+
+        .grid line {
+            stroke: #e0e0e0;
+            stroke-dasharray: 2,2;
+        }
+
+        .grid path {
+            stroke-width: 0;
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #c62828;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .team-members {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>REAL TIME GRAPHS</h1>
+            <div class="team-info">
+                <h3>👥 Integrantes del Equipo</h3>
+                <div class="team-members">
+                    <div class="member">ALAN </div>
+                    <div class="member">Carlos</div>
+                    <div class="member">ROGELIO</div>
+                    <div class="member">EMMANUEL</div>
+                    <div class="member">Francisco</div>
+                    <div class="member">Daniel</div>
+                </div>
+                <div class="explanation">
+                    <strong>📊 Descripción del Proyecto:</strong><br>
+                    Este dashboard muestra datos meteorológicos en tiempo real utilizando la API de OpenWeatherMap. 
+                    Las cuatro gráficas presentan la evolución temporal de temperatura, humedad, presión atmosférica y velocidad del viento. 
+                    Los datos se actualizan cada 30 segundos, proporcionando una visualización dinámica del clima actual.
+                    Utiliza D3.js para crear visualizaciones interactivas y responsivas que se adaptan a diferentes dispositivos.
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="api-key">🔑 API Key:</label>
+                <input type="text" id="api-key" placeholder="Ingresa tu API key de OpenWeatherMap">
+            </div>
+            <div class="control-group">
+                <label for="city-input">🏙️ Ciudad:</label>
+                <input type="text" id="city-input" value="Mexico City" placeholder="Nombre de la ciudad">
+            </div>
+            <div class="control-group">
+                <button class="start-btn" onclick="startWeatherStream()">▶️ Iniciar</button>
+                <button class="stop-btn" onclick="stopWeatherStream()">⏹️ Detener</button>
+                <button class="clear-btn" onclick="clearAllData()">🧹 Limpiar</button>
+            </div>
+        </div>
+
+        <div class="status" id="status">
+            ⚠️ Ingresa tu API key para comenzar a recibir datos meteorológicos
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-container">
+                <div class="chart-title">🌡️ Temperatura (°C)</div>
+                <div id="temperature-chart" class="chart"></div>
+                <div class="chart-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="temp-current">--</div>
+                        <div>Actual</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="temp-min">--</div>
+                        <div>Mínima</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="temp-max">--</div>
+                        <div>Máxima</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="temp-avg">--</div>
+                        <div>Promedio</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">💧 Humedad (%)</div>
+                <div id="humidity-chart" class="chart"></div>
+                <div class="chart-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="humidity-current">--</div>
+                        <div>Actual</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="humidity-min">--</div>
+                        <div>Mínima</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="humidity-max">--</div>
+                        <div>Máxima</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="humidity-avg">--</div>
+                        <div>Promedio</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">🌪️ Presión Atmosférica (hPa)</div>
+                <div id="pressure-chart" class="chart"></div>
+                <div class="chart-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="pressure-current">--</div>
+                        <div>Actual</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="pressure-min">--</div>
+                        <div>Mínima</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="pressure-max">--</div>
+                        <div>Máxima</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="pressure-avg">--</div>
+                        <div>Promedio</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">💨 Velocidad del Viento (m/s)</div>
+                <div id="wind-chart" class="chart"></div>
+                <div class="chart-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="wind-current">--</div>
+                        <div>Actual</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="wind-min">--</div>
+                        <div>Mínima</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="wind-max">--</div>
+                        <div>Máxima</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="wind-avg">--</div>
+                        <div>Promedio</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuración global
+        const maxDataPoints = 50;
+        let weatherData = [];
+        let streamInterval;
+        let isStreaming = false;
+        
+        // Configuración de los gráficos
+        const chartConfig = {
+            margin: { top: 20, right: 30, bottom: 40, left: 50 },
+            width: 0,
+            height: 0
+        };
+
+        // Objetos para almacenar los elementos de cada gráfico
+        const charts = {
+            temperature: { data: [], svg: null, line: null, path: null, xScale: null, yScale: null },
+            humidity: { data: [], svg: null, line: null, path: null, xScale: null, yScale: null },
+            pressure: { data: [], svg: null, line: null, path: null, xScale: null, yScale: null },
+            wind: { data: [], svg: null, line: null, path: null, xScale: null, yScale: null }
+        };
+
+        // Función para obtener dimensiones del gráfico
+        function getChartDimensions() {
+            const chartElement = document.querySelector('.chart');
+            const rect = chartElement.getBoundingClientRect();
+            return {
+                width: rect.width - chartConfig.margin.left - chartConfig.margin.right,
+                height: rect.height - chartConfig.margin.top - chartConfig.margin.bottom
+            };
+        }
+
+        // Función para inicializar un gráfico
+        function initChart(chartId, lineClass) {
+            const container = d3.select(`#${chartId}`);
+            container.selectAll("*").remove();
+            
+            const dimensions = getChartDimensions();
+            const width = dimensions.width;
+            const height = dimensions.height;
+            
+            const svg = container
+                .append("svg")
+                .attr("width", width + chartConfig.margin.left + chartConfig.margin.right)
+                .attr("height", height + chartConfig.margin.top + chartConfig.margin.bottom);
+                
+            const g = svg.append("g")
+                .attr("transform", `translate(${chartConfig.margin.left},${chartConfig.margin.top})`);
+            
+            // Escalas
+            const xScale = d3.scaleTime().range([0, width]);
+            const yScale = d3.scaleLinear().range([height, 0]);
+            
+            // Generador de línea
+            const line = d3.line()
+                .x(d => xScale(d.time))
+                .y(d => yScale(d.value))
+                .curve(d3.curveMonotoneX);
+            
+            // Ejes
+            const xAxis = d3.axisBottom(xScale).tickFormat(d3.timeFormat("%H:%M"));
+            const yAxis = d3.axisLeft(yScale);
+            
+            // Agregar ejes
+            const xAxisG = g.append("g")
+                .attr("class", "axis")
+                .attr("transform", `translate(0,${height})`);
+                
+            const yAxisG = g.append("g")
+                .attr("class", "axis");
+            
+            // Grid
+            const xGrid = g.append("g")
+                .attr("class", "grid")
+                .attr("transform", `translate(0,${height})`);
+                
+            const yGrid = g.append("g")
+                .attr("class", "grid");
+            
+            // Path para la línea
+            const path = g.append("path")
+                .attr("class", `line ${lineClass}`);
+            
+            return {
+                svg, g, xScale, yScale, line, xAxis, yAxis, xAxisG, yAxisG, xGrid, yGrid, path, width, height
+            };
+        }
+
+        // Función para actualizar un gráfico
+        function updateChart(chartKey, data) {
+            const chart = charts[chartKey];
+            if (!chart.svg || !data.length) return;
+            
+            // Actualizar dominios
+            chart.xScale.domain(d3.extent(data, d => d.time));
+            chart.yScale.domain(d3.extent(data, d => d.value));
+            
+            // Actualizar ejes
+            chart.xAxisG.transition().duration(500).call(chart.xAxis);
+            chart.yAxisG.transition().duration(500).call(chart.yAxis);
+            
+            // Actualizar grid
+            chart.xGrid.transition().duration(500)
+                .call(d3.axisBottom(chart.xScale).tickSize(-chart.height).tickFormat(""));
+            chart.yGrid.transition().duration(500)
+                .call(d3.axisLeft(chart.yScale).tickSize(-chart.width).tickFormat(""));
+            
+            // Actualizar línea
+            chart.path.datum(data)
+                .transition()
+                .duration(500)
+                .attr("d", chart.line);
+        }
+
+        // Función para actualizar estadísticas
+        function updateStats(chartKey, data, unit = '') {
+            if (!data.length) return;
+            
+            const values = data.map(d => d.value);
+            const current = values[values.length - 1];
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            const avg = values.reduce((sum, val) => sum + val, 0) / values.length;
+            
+            document.getElementById(`${chartKey}-current`).textContent = current.toFixed(1) + unit;
+            document.getElementById(`${chartKey}-min`).textContent = min.toFixed(1) + unit;
+            document.getElementById(`${chartKey}-max`).textContent = max.toFixed(1) + unit;
+            document.getElementById(`${chartKey}-avg`).textContent = avg.toFixed(1) + unit;
+        }
+
+        // Función para obtener datos del clima
+        async function fetchWeatherData() {
+            const apiKey = document.getElementById('api-key').value.trim();
+            const city = document.getElementById('city-input').value.trim();
+            
+            if (!apiKey) {
+                document.getElementById('status').innerHTML = '⚠️ Por favor ingresa tu API key';
+                return;
+            }
+            
+            if (!city) {
+                document.getElementById('status').innerHTML = '⚠️ Por favor ingresa el nombre de una ciudad';
+                return;
+            }
+            
+            try {
+                document.getElementById('status').innerHTML = '🔄 Obteniendo datos meteorológicos...';
+                
+                const response = await fetch(
+                    `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`
+                );
+                
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                const timestamp = new Date();
+                const weatherPoint = {
+                    time: timestamp,
+                    temperature: data.main.temp,
+                    humidity: data.main.humidity,
+                    pressure: data.main.pressure,
+                    wind: data.wind ? data.wind.speed : 0
+                };
+                
+                // Agregar datos a cada gráfico
+                Object.keys(charts).forEach(key => {
+                    const chartData = charts[key].data;
+                    chartData.push({
+                        time: timestamp,
+                        value: weatherPoint[key]
+                    });
+                    
+                    if (chartData.length > maxDataPoints) {
+                        chartData.shift();
+                    }
+                    
+                    updateChart(key, chartData);
+                    
+                    // Actualizar estadísticas con unidades apropiadas
+                    const units = {
+                        temperature: '°C',
+                        humidity: '%',
+                        pressure: ' hPa',
+                        wind: ' m/s'
+                    };
+                    updateStats(key, chartData, units[key]);
+                });
+                
+                document.getElementById('status').innerHTML = `✅ Datos actualizados - ${city} - ${timestamp.toLocaleTimeString()}`;
+                
+            } catch (error) {
+                console.error('Error fetching weather data:', error);
+                document.getElementById('status').innerHTML = `❌ Error: ${error.message}`;
+            }
+        }
+
+        // Funciones de control
+        function startWeatherStream() {
+            const apiKey = document.getElementById('api-key').value.trim();
+            if (!apiKey) {
+                alert('Por favor ingresa tu API key de OpenWeatherMap');
+                return;
+            }
+            
+            if (!isStreaming) {
+                isStreaming = true;
+                fetchWeatherData(); // Obtener datos inmediatamente
+                streamInterval = setInterval(fetchWeatherData, 30000); // Cada 30 segundos
+                
+                document.querySelector('.start-btn').style.opacity = '0.5';
+                document.querySelector('.stop-btn').style.opacity = '1';
+                
+                document.getElementById('status').innerHTML = '🟢 Stream iniciado - Actualizando cada 30 segundos';
+            }
+        }
+
+        function stopWeatherStream() {
+            if (isStreaming) {
+                isStreaming = false;
+                clearInterval(streamInterval);
+                
+                document.querySelector('.start-btn').style.opacity = '1';
+                document.querySelector('.stop-btn').style.opacity = '0.5';
+                
+                document.getElementById('status').innerHTML = '🔴 Stream detenido';
+            }
+        }
+
+        function clearAllData() {
+            stopWeatherStream();
+            
+            // Limpiar datos de todos los gráficos
+            Object.keys(charts).forEach(key => {
+                charts[key].data = [];
+                updateChart(key, []);
+                
+                // Resetear estadísticas
+                ['current', 'min', 'max', 'avg'].forEach(stat => {
+                    const element = document.getElementById(`${key}-${stat}`);
+                    if (element) element.textContent = '--';
+                });
+            });
+            
+            document.getElementById('status').innerHTML = '🧹 Datos limpiados';
+        }
+
+        // Función para manejar el redimensionado
+        function handleResize() {
+            Object.keys(charts).forEach(key => {
+                const chartElements = initChart(`${key}-chart`, `${key}-line`);
+                charts[key] = { ...charts[key], ...chartElements };
+                
+                if (charts[key].data.length > 0) {
+                    updateChart(key, charts[key].data);
+                }
+            });
+        }
+
+        // Inicialización
+        window.addEventListener('load', () => {
+            // Inicializar todos los gráficos
+            const chartConfigs = [
+                { key: 'temperature', id: 'temperature-chart', class: 'temperature-line' },
+                { key: 'humidity', id: 'humidity-chart', class: 'humidity-line' },
+                { key: 'pressure', id: 'pressure-chart', class: 'pressure-line' },
+                { key: 'wind', id: 'wind-chart', class: 'wind-line' }
+            ];
+            
+            chartConfigs.forEach(config => {
+                const chartElements = initChart(config.id, config.class);
+                charts[config.key] = { ...charts[config.key], ...chartElements };
+            });
+            
+            // Estado inicial de botones
+            document.querySelector('.stop-btn').style.opacity = '0.5';
+        });
+
+        // Listener para redimensionado
+        window.addEventListener('resize', handleResize);
+
+        // Permitir iniciar con Enter en los campos de entrada
+        document.getElementById('api-key').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                startWeatherStream();
+            }
+        });
+
+        document.getElementById('city-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                startWeatherStream();
+            }
+        });
+    </script>
+</body>
+</html>
