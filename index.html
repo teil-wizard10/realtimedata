@@ -120,7 +120,7 @@
     <div>
       <h3>📊 Descripción del Proyecto</h3>
       <p>
-        Este dashboard muestra datos meteorológicos en tiempo real utilizando la API de OpenWeatherMap. Las cuatro gráficas presentan la evolución temporal de temperatura, humedad, presión atmosférica y velocidad del viento. Los datos se actualizan cada 30 segundos, proporcionando una visualización dinámica del clima actual. Utiliza D3.js para crear visualizaciones interactivas y responsivas que se adaptan a diferentes dispositivos.
+        Este dashboard muestra datos meteorológicos en tiempo real utilizando la API de OpenWeatherMap. Las cuatro gráficas presentan la evolución temporal de temperatura, humedad, presión atmosférica y velocidad del viento. Los datos se actualizan cada 1 segundo, proporcionando una visualización dinámica del clima actual. Utiliza D3.js para crear visualizaciones interactivas y responsivas que se adaptan a diferentes dispositivos.
       </p>
     </div>
   </div>
@@ -240,7 +240,7 @@
         if (!intervalId) {
           simulateData(); // primer llamada inmediata
           intervalId = setInterval(simulateData, 1000);
-          status.textContent = "✅ Conectado. Actualizando cada 30s.";
+          status.textContent = "✅ Conectado. Actualizando cada 1 segundo.";
         }
       }, 1500);
     };
